@@ -1,20 +1,48 @@
-name: Deploy
-on: push
+name: Deploy Java App
+
+on:
+  push:
+    branches: [ main ]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: mvn clean package
-      - uses: appleboy/ssh-action@v1.0.0
+      # 1. 检出代码（递归检出子模块）
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # 2. 设置JDK环境
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 3. 构建项目（显式指定pom.xml路径）
+      - name: Build with Maven
+        run: |
+          cd seckill-demo  # 进入子模块目录
+          mvn clean package -DskipTests
+
+      # 4. 部署到服务器（适配OpenCloudOS）
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # 安装OpenCloudOS依赖
             sudo yum install -y java-17-openjdk
-            mkdir -p ~/app
-            scp target/*.jar ~/app/
+            
+            # 部署目录管理
+            mkdir -p ~/app/seckill
+            scp seckill-demo/target/*.jar ~/app/seckill/
+            
+            # 重启服务
             pkill -f "java -jar" || true
-            cd ~/app
+            cd ~/app/seckill
             nohup java -jar *.jar > app.log 2>&1 &
