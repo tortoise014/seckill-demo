@@ -8,11 +8,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1. 检出代码（递归检出子模块）
+      # 1. 递归检出代码（含子模块）
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          path: 'seckill-demo'  # 显式指定检出路径
 
       # 2. 设置JDK环境
       - name: Set up JDK 17
@@ -21,13 +22,21 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. 构建项目（显式指定pom.xml路径）
-      - name: Build with Maven
-        run: |
-          cd seckill-demo  # 进入子模块目录
-          mvn clean package -DskipTests
+      # 3. 缓存Maven依赖（加速构建）
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-m2-
 
-      # 4. 部署到服务器（适配OpenCloudOS）
+      # 4. 构建项目（严格指定工作目录）
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+        working-directory: ./seckill-demo  # 关键修正点
+
+      # 5. 部署到OpenCloudOS服务器
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -35,14 +44,18 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # 安装OpenCloudOS依赖
+            # 安装依赖
             sudo yum install -y java-17-openjdk
-            
-            # 部署目录管理
-            mkdir -p ~/app/seckill
-            scp seckill-demo/target/*.jar ~/app/seckill/
-            
-            # 重启服务
+
+            # 清理旧部署
+            mkdir -p ~/app
             pkill -f "java -jar" || true
-            cd ~/app/seckill
-            nohup java -jar *.jar > app.log 2>&1 &
+
+            # 传输并启动新版本
+            scp seckill-demo/target/*.jar ~/app/app.jar
+            cd ~/app
+            nohup java -jar app.jar > app.log 2>&1 &
+
+            # 验证启动
+            sleep 10
+            curl -I http://localhost:8080 || echo "启动检查失败"
