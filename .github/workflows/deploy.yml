@@ -13,16 +13,13 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-          path: 'seckill-demo'
+          path: seckill-demo
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
+      - uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -30,78 +27,65 @@ jobs:
 
       - name: Build with Maven
         run: ./mvnw clean package
-        working-directory: ./seckill-demo
+        working-directory: seckill-demo
 
       - name: Verify JAR
-        run: |
-          ls -lh seckill-demo/target/*.jar
-          file seckill-demo/target/*.jar
-        working-directory: ./
+        run: ls -lh target/*.jar
+        working-directory: seckill-demo
 
   docker-build:
     needs: build-and-test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          path: 'seckill-demo'
+          path: seckill-demo
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - uses: docker/setup-buildx-action@v2
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+      - uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
+      - uses: docker/metadata-action@v4
         id: meta
-        uses: docker/metadata-action@v4
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha
-            type=ref,event=branch
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+      - uses: docker/build-push-action@v4
         with:
           context: seckill-demo
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          file: Dockerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: ${{ github.ref == 'refs/heads/main' }}
 
   deploy:
     needs: docker-build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
+      - uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v1
+      - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Pull and run the new container
             docker pull ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:main
             docker stop ${{ env.IMAGE_NAME }} || true
             docker rm ${{ env.IMAGE_NAME }} || true
             docker run -d \
               --name ${{ env.IMAGE_NAME }} \
               -p ${{ env.CONTAINER_PORT }}:${{ env.CONTAINER_PORT }} \
+              --restart unless-stopped \
               -e TZ=Asia/Shanghai \
               ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:main
+            docker ps -a | grep ${{ env.IMAGE_NAME }}
