@@ -43,7 +43,8 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.properties
+# Don't ignore maven-wrapper.properties as it's needed for Maven Wrapper to work
+# .mvn/wrapper/maven-wrapper.properties
 
 # Gradle
 .gradle/
