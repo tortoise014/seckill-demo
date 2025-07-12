@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+image.pngname: CI/CD Pipeline
 
 on:
   push:
@@ -67,7 +67,6 @@ jobs:
         with:
           context: ./seckill-demo
           file: ./seckill-demo/Dockerfile
-          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: ${{ steps.meta.outputs.tags }}

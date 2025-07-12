@@ -14,8 +14,8 @@ COPY src ./src
 # 构建应用
 RUN mvn clean package -DskipTests
 
-# 运行时镜像
-FROM eclipse-temurin:17-jre-alpine
+# 运行时镜像 - 使用更兼容的基础镜像
+FROM eclipse-temurin:17-jre
 
 # 设置工作目录
 WORKDIR /app
