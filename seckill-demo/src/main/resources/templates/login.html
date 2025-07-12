@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>秒杀系统 - 登录</title>
+    <!-- 引入MD5加密库 -->
+    <script src="https://cdn.jsdelivr.net/npm/js-md5@0.7.3/src/md5.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            transform: translateY(-20px);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-title {
+            color: #333;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #adb5bd;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .forgot-password a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .forgot-password a:hover {
+            color: #764ba2;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #e1e5e9;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .register-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .register-link a:hover {
+            color: #764ba2;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+            font-size: 14px;
+            display: none;
+        }
+
+        .encrypt-info {
+            background-color: #e7f3ff;
+            color: #0066cc;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #b3d9ff;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .login-container {
+                margin: 20px;
+                padding: 30px 25px;
+            }
+            
+            .login-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1 class="login-title">秒杀系统</h1>
+            <p class="login-subtitle">欢迎回来，请登录您的账户</p>
+        </div>
+
+        <!-- 加密提示信息 -->
+        <div class="encrypt-info">
+            🔒 密码已采用MD5加盐加密传输，保障您的账户安全
+        </div>
+
+        <!-- 错误消息 -->
+        <div class="error-message" id="errorMessage" th:if="${error}" th:text="${error}">
+        </div>
+
+        <!-- 成功消息 -->
+        <div class="success-message" id="successMessage" th:if="${success}" th:text="${success}">
+        </div>
+
+        <form action="/login/doLogin" method="post" id="loginForm">
+            <div class="form-group">
+                <label for="mobile" class="form-label">手机号码</label>
+                <input type="text" 
+                       id="mobile" 
+                       name="mobile" 
+                       class="form-input" 
+                       placeholder="请输入手机号码"
+                       required
+                       pattern="^1[3-9]\d{9}$"
+                       title="请输入正确的手机号码">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">密码</label>
+                <input type="password" 
+                       id="password" 
+                       name="password" 
+                       class="form-input" 
+                       placeholder="请输入密码"
+                       required
+                       minlength="6">
+                <!-- 隐藏字段，用于传输加密后的密码 -->
+                <input type="hidden" id="encryptedPassword" name="encryptedPassword">
+            </div>
+
+            <button type="submit" class="login-btn">登录</button>
+        </form>
+
+        <div class="forgot-password">
+            <a href="/password/forgot">忘记密码？</a>
+        </div>
+
+        <div class="register-link">
+            还没有账户？<a href="/register">立即注册</a>
+        </div>
+    </div>
+
+    <script>
+        // 前端加盐配置（与后端MD5Util中的salt保持一致）
+        const SALT = "1a2b3c4d";
+        
+        /**
+         * 前端密码加密函数（与后端MD5Util.inputPassToFormPass逻辑一致）
+         * @param {string} inputPass 用户输入的明文密码
+         * @returns {string} 加密后的密码
+         */
+        function inputPassToFormPass(inputPass) {
+            // 构造加盐字符串：salt[0] + salt[2] + password + salt[5] + salt[4]
+            // 对应："1" + "2" + password + "c" + "d"
+            const saltedPassword = ""+SALT.charAt(0) + SALT.charAt(2) + inputPass + SALT.charAt(5) + SALT.charAt(4);
+            return md5(saltedPassword);
+        }
+
+        // 表单提交事件处理
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止默认提交
+            
+            const mobile = document.getElementById('mobile').value;
+            const password = document.getElementById('password').value;
+            
+            // 手机号验证
+            const mobileRegex = /^1[3-9]\d{9}$/;
+            if (!mobileRegex.test(mobile)) {
+                showError('请输入正确的手机号码');
+                return;
+            }
+            
+            // 密码验证
+            if (password.length < 6) {
+                showError('密码长度不能少于6位');
+                return;
+            }
+            
+            // 显示加载状态
+            const submitBtn = document.querySelector('.login-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '加密中...';
+            submitBtn.disabled = true;
+            
+            try {
+                // 前端加密密码
+                const encryptedPass = inputPassToFormPass(password);
+                
+                // 清空明文密码字段
+                document.getElementById('password').value = '';
+                
+                // 将加密后的密码放入隐藏字段
+                document.getElementById('encryptedPassword').value = encryptedPass;
+                
+                // 更新提交按钮状态
+                submitBtn.textContent = '登录中...';
+                
+                // 提交表单
+                setTimeout(() => {
+                    this.submit();
+                }, 500); // 稍微延迟，让用户看到加密过程
+                
+            } catch (error) {
+                console.error('密码加密失败:', error);
+                showError('密码加密失败，请重试');
+                
+                // 恢复按钮状态
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // 输入框焦点效果
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('focused');
+            });
+        });
+
+        // 页面加载完成后的提示
+        window.addEventListener('load', function() {
+            // 前端加密功能已启用
+        });
+    </script>
+</body>
+</html>

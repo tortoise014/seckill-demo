@@ -1,0 +1,29 @@
+spring:
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/seckill?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: Wr20050305
+    hikari:
+      pool-name:
+      minimum-idle: 5
+      idle-timeout: 180000
+
+# MyBatis-Plus配置
+mybatis-plus:
+  configuration:
+    # 开启驼峰命名转换
+    map-underscore-to-camel-case: true
+    # 打印SQL日志
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  # 实体类包路径
+  type-aliases-package: com.seckilldemo.pojo
+  # Mapper XML文件路径（如果需要）
+  mapper-locations: classpath:mapper/*.xml
