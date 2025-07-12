@@ -1,11 +1,11 @@
-# 使用 OpenJDK 17 作为基础镜像
-FROM openjdk:17-jdk-slim as builder
+# 使用 Eclipse Temurin JDK 17 作为构建镜像
+FROM eclipse-temurin:17-jdk-alpine as builder
 
 # 设置工作目录
 WORKDIR /app
 
 # 安装 Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache maven
 
 # 复制 pom.xml 和源代码
 COPY pom.xml .
@@ -15,7 +15,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # 运行时镜像
-FROM openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre-alpine
 
 # 设置工作目录
 WORKDIR /app
